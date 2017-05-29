@@ -15,19 +15,23 @@ uint8_t pins[5] = {
 #define BUTTON_PIN  2
 
 // effect numbers
-#define EFFECT_COUNT                    7
-#define FLASH                           1
-#define LOADING                         2
-#define ALTERNATE_FLASH                 3
-#define RANDOM_FLASH_INDIVIDUAL         4
-#define RANDOM_FLASH_INDIVIDUAL_INVERT  5
-#define RANDOM_FLASH_PAIR               6
-#define RANDOM_FLASH_PAIR_INVERT        7
+#define EFFECT_COUNT                    6
+#define ALL_ON                          1
+#define FLASH                           2
+#define LOADING                         3
+#define RANDOM_FLASH                    4
+#define PAIR_FLASH                      5
+#define BLUE                            6
 
-int delay_array [EFFECT_COUNT + 1] = {100, 50, 10, 10, 100, 100, 100};
 
-uint8_t count = 0;
-uint8_t colour_index = 0;
+
+int delay_array [EFFECT_COUNT + 1] = {0, 0, 150, 100, 100, 1000};
+
+uint16_t count = 0;
+
+uint8_t prev_random = 0;
+
+#define ALLFLASH_DELAY    200
 
 boolean button_state = false;
 #define BUTTON_DEBOUNCE_TIME 50
@@ -68,7 +72,7 @@ void loop() {
   else if(digitalRead(BUTTON_PIN) && button_state == true){
     button_state = false;
     button_timer = millis() - button_timer;
-    // was the button pressed for too long?
+    // was the button pressed for too long,  if so set effect to default
     if(button_timer > BUTTON_RESET_TIME){
       previous_button_press_count = 0;
       effect_delay = 1000;
@@ -86,9 +90,12 @@ void loop() {
       button_press_timer = millis();    
     }
   }
-  else if(((millis() - button_press_timer) > BUTTON_PRESS_TIME) && (button_press_timer_active == true)){
-    button_press_timer_active = false;
-    button_timeout = true;
+  // has the user stopped pressing buttons?
+  else if(button_press_timer_active == true){
+    if((millis() - button_press_timer) > BUTTON_PRESS_TIME){
+      button_press_timer_active = false;
+      button_timeout = true;
+    }
   }
 
   // check if button_timeout is true and respond by setting new display parameters
@@ -110,41 +117,39 @@ void loop() {
   if((millis() - effect_timer) > effect_delay){
     // update pixel ring based on the previous button press count
     switch(previous_button_press_count){
+      case ALL_ON:
+      {
+        allOn();
+      }
+      break;
       case FLASH:
       {
-        //ledsOn();
         allFlash();
       }
       break;
       case LOADING:
       {
-        //
+        loading();
       }
       break;
-      case ALTERNATE_FLASH:
+      case RANDOM_FLASH:
       {
-        //
+        randomLed();
       }
       break;
-      case RANDOM_FLASH_INDIVIDUAL:
+      case PAIR_FLASH:
       {
-        //
+        allOn();
       }
       break;
-      case RANDOM_FLASH_INDIVIDUAL_INVERT:
+      case BLUE:
       {
-        //
+        digitalWrite(pins[0], LOW);
+        digitalWrite(pins[1], HIGH);
+        digitalWrite(pins[2], LOW);
+        digitalWrite(pins[3], LOW);
       }
       break;
-      case RANDOM_FLASH_PAIR:
-      {
-        //
-      }
-      break;
-      case RANDOM_FLASH_PAIR_INVERT:
-      {
-        //
-      }
       default:
       {
         ledsOff();
@@ -155,34 +160,107 @@ void loop() {
   }
 }
 
-void ledsOn(void){
-  for(int n = 0; n < 4; n++){
-    digitalWrite(pins[n], HIGH);
-  }
-}
-
 void ledsOff(void){
   for(int n = 0; n < 4; n++){
     digitalWrite(pins[n], LOW);
   }
 }
 
+void allOn(void){
+  if(count == 0){
+    digitalWrite(pins[0], HIGH);
+    digitalWrite(pins[2], HIGH);
+    digitalWrite(pins[1], LOW);
+    digitalWrite(pins[3], LOW);
+  }
+  else if(count == 1){
+    digitalWrite(pins[0], LOW);
+    digitalWrite(pins[2], LOW);
+    digitalWrite(pins[1], HIGH);
+    digitalWrite(pins[3], HIGH);
+  }
+  count ++;
+  if(count == 2){
+    count = 0;
+  }
+}
+
+void allFlash(void){
+  if(count > ALLFLASH_DELAY){
+    ledsOff();
+    if(count > (ALLFLASH_DELAY * 2)){
+      count = 0;
+    }
+  }
+  else if((count%2) == 0){
+    digitalWrite(pins[0], HIGH);
+    digitalWrite(pins[2], HIGH);
+    digitalWrite(pins[1], LOW);
+    digitalWrite(pins[3], LOW);
+  }
+  else if((count%2) == 1){
+    digitalWrite(pins[0], LOW);
+    digitalWrite(pins[2], LOW);
+    digitalWrite(pins[1], HIGH);
+    digitalWrite(pins[3], HIGH);
+  }
+  count ++;
+}
+
+void loading(void){
+  for(int n = 0; n < 4; n++){
+    if(n == count){
+      digitalWrite(pins[n], HIGH);
+    }
+    else{
+      digitalWrite(pins[n], LOW);
+    }
+  }
+  count ++;
+  if(count == 4){
+    count = 0;
+  }
+}
+
+void randomLed(void){
+  int new_random;
+  do{
+    new_random = random()%4;
+  }
+  while(new_random == prev_random);
+  for(int n = 0; n < 4; n++){
+    if(n == new_random){
+      digitalWrite(pins[n], HIGH);
+    }
+    else{
+      digitalWrite(pins[n], LOW);
+    }
+  }
+  prev_random = new_random;
+}
+
+/*
 void allFlash(void){
   int flash_state;
   if(count == 0){
     flash_state = HIGH;
   }
-  else if(count == 2){
+  else if(count == 1){
     flash_state = LOW;
   }
   for(int n = 0; n < 4; n++){
     digitalWrite(pins[n], flash_state);
   }
   count++;
-  if(count == 3){
+  if(count == 2){
     count = 0;
   }
 }
+*/
+
+
+
+
 
 /*
 
