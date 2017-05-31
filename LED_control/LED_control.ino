@@ -9,6 +9,9 @@
  * - trippy pair flash
  * - just blue light for torch (blue is very bright)
  * 
+ * Extra functionality for this branch:
+ * - extra mode whereby entering a specific sequence unlocks a new flashing pattern...
+ * 
  */
 
 uint8_t pins[5] = {
@@ -34,6 +37,8 @@ int delay_array [EFFECT_COUNT + 1] = {0, 0, 150, 100, 100, 1000};
 uint16_t count = 0;
 
 uint8_t prev_random = 0;
+
+uint8_t secret_counter = 0;
 
 #define ALLFLASH_DELAY    200
 
@@ -109,6 +114,29 @@ void loop() {
     }
     else{
       effect_delay = 1000;
+    }
+
+    // secret mode
+    if((previous_button_press_count == 3) && (secret_counter == 0)){
+      secret_counter = 1;
+    }
+    else if((previous_button_press_count == 1) && (secret_counter == 1)){
+      secret_counter = 2;
+    }
+    else if((previous_button_press_count == 1) && (secret_counter == 2)){
+      // secret mode activated
+      secret_counter = 3;
+      ledsOff();
+      morseTransmit();
+      //loop forever
+      while(1){
+        if(!digitalRead(BUTTON_PIN)){
+          morseTransmit();
+        }
+      }
+    }
+    else{
+      secret_counter = 0;
     }
     
   }
